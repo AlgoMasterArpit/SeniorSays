@@ -13,7 +13,7 @@ export default function RTE({name, control, label, defaultValue =""}) {
     try {
         const genAI = new GoogleGenerativeAI(conf.geminiApiKey);
        // 👇 Updated Model Name
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // AI ko context dein
         const fullPrompt = `
