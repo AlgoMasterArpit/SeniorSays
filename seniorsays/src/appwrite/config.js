@@ -20,7 +20,7 @@ export class Service {
     // 📝 Database Service (Stories)
     // ==============================
 
-    async createPost({ title, slug, content, companyName, roleType, status,interviewOutcome, difficulty, resumeFileId, userId }) {
+    async createPost({ title, slug, content, companyName, roleType, status,interviewOutcome, difficulty, resumeFileId, userId,authorName }) {
         try {
             return await this.databases.createDocument(
                 conf.appwriteDatabaseId,
@@ -36,10 +36,13 @@ export class Service {
                     difficulty,
                     resumeFileId,
                     userId,
+                    slug,
+                    authorName,
                 }
             )
         } catch (error) {
             console.log("Appwrite service :: createPost :: error", error);
+            return false;
         }
     }
 //  pehle i want ki doc id paas ho toh slug pehle paas kia
@@ -163,7 +166,7 @@ export class Service {
 
 const service = new Service()
 export default service
-
+//  is file me jha get lga h vha we are taking data from the  appwrite and baakio me we are sending data to appwrite
 
 // 1. slugWhat is it? It is the "URL version" of the title.Title: "My Amazon Interview" 
 // Slug: my-amazon-interviewWhere does it come from? Your React code creates it.
