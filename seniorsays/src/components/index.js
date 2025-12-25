@@ -11,7 +11,7 @@ import Button from "./Button";
 import PostForm from "./post-form/PostForm";
 import PostCard from "./PostCard"; 
 import AuthLayout from "./AuthLayout";
-import Input from "./Input";
+import Input from "./input" // ✅ Match kar diya
 
 export {
     Header,
