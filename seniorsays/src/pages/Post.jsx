@@ -17,11 +17,11 @@ export default function Post() {
     const userData = useSelector((state) => state.auth.userData);
 
     // Check if the current user is the author of the post
-//     Check 1 (post && userData): Pehle confirm karo ki Post load ho chuka hai aur User logged-in hai.
+    // Check 1 (post && userData): Pehle confirm karo ki Post load ho chuka hai aur User logged-in hai.
 
-// Check 2 (post.userId === userData.$id):
+    // Check 2 (post.userId === userData.$id):
 
-// Kya Post likhne wale ki ID (userId) aur abhi Login user ki ID ($id) same hai?
+    // Kya Post likhne wale ki ID (userId) aur abhi Login user ki ID ($id) same hai?
     const isAuthor = post && userData ? post.userId === userData.$id : false;
 
     useEffect(() => {
@@ -47,61 +47,72 @@ export default function Post() {
             }
         });
     };
-const getStatusTextColor = (status) => {
+    const getStatusTextColor = (status) => {
         const lowerStatus = status?.toLowerCase();
         if (lowerStatus === 'selected') return "text-green-400";
         if (lowerStatus === 'rejected') return "text-red-400"; // 🔴 Ye raha Red color
         return "text-yellow-400";
     };
     return post ? (
-        <div className="py-8">
+        // Updated: Added min-h-screen and bg-slate-900 for dark theme consistency
+        // Updated: Responsive padding (py-6 mobile, py-12 desktop)
+        <div className="py-6 md:py-12 min-h-screen bg-slate-900">
             <Container>
+                
                 {/* 1. Header Section: Title & Edit Buttons */}
-                <div className="w-full flex justify-between items-start mb-6 border-b border-slate-700 pb-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-white">{post.title}</h1>
-                        <p className="text-teal-400 mt-2 text-lg font-semibold">
+                {/* Updated: Flex-col on mobile (stack vertically), Flex-row on desktop */}
+                <div className="w-full flex flex-col md:flex-row md:justify-between md:items-start mb-6 border-b border-slate-700 pb-4 gap-4 md:gap-0">
+                    <div className="w-full md:w-auto">
+                        {/* Updated: Responsive Text sizes */}
+                        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">
+                            {post.title}
+                        </h1>
+                        <p className="text-teal-400 mt-2 text-base md:text-lg font-semibold">
                             {post.companyName} <span className="text-gray-500 text-sm">({post.roleType})</span>
                         </p>
                     </div>
                     
                     {/* Only show Edit/Delete if user is the Author */}
                     {isAuthor && (
-                        <div className="flex gap-2">
-                            <Link to={`/edit-post/${post.$id}`}>
-                                <Button bgColor="bg-green-500" className="mr-3">
+                        <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                            <Link to={`/edit-post/${post.$id}`} className="w-1/2 md:w-auto">
+                                <Button bgColor="bg-green-500" className="mr-0 md:mr-3 w-full md:w-auto">
                                     Edit
                                 </Button>
                             </Link>
-                            <Button bgColor="bg-red-500" onClick={deletePost}>
-                                Delete
-                            </Button>
+                            <div className="w-1/2 md:w-auto">
+                                <Button bgColor="bg-red-500" onClick={deletePost} className="w-full md:w-auto">
+                                    Delete
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
 
                 {/* 2. Badges Row (Outcome, Difficulty, Status) */}
-                <div className="flex flex-wrap gap-4 mb-8">
-                   <span className="px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-sm">
+                {/* Already using flex-wrap, keeping it. Added w-full styling for badges on tiny screens if needed */}
+                <div className="flex flex-wrap gap-3 md:gap-4 mb-8">
+                   <span className="px-3 md:px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-xs md:text-sm">
                 
                 {/* 👇 Yahan function call kiya */}
-                Outcome: <strong className={getStatusTextColor(post.interviewOutcome)}>
+                Outcome: <strong className={`${getStatusTextColor(post.interviewOutcome)} ml-1`}>
                     {post.interviewOutcome}
                 </strong>
 
             </span>
-                    <span className="px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-sm">
-                        Difficulty: <strong className="text-teal-400">{post.difficulty}/5</strong>
+                    <span className="px-3 md:px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-xs md:text-sm">
+                        Difficulty: <strong className="text-teal-400 ml-1">{post.difficulty}/5</strong>
                     </span>
-                    <span className="px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-sm">
-                        Status: {post.status}
+                    <span className="px-3 md:px-4 py-2 bg-slate-800 rounded-lg text-gray-300 border border-slate-700 text-xs md:text-sm">
+                        Status: <span className="ml-1">{post.status}</span>
                     </span>
                 </div>
 
                 {/* 3. Resume Download Section */}
                 {post.resumeFileId && (
-                    <div className="mb-8 p-4 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                    // Updated: Stack on mobile (flex-col), Row on desktop (sm:flex-row)
+                    <div className="mb-8 p-4 bg-slate-800/50 border border-slate-700 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-0">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
                             <span className="text-2xl">📄</span>
                             <div>
                                 <h3 className="text-white font-semibold">Attached Resume</h3>
@@ -110,7 +121,8 @@ const getStatusTextColor = (status) => {
                         </div>
                         <a 
                             href={appwriteService.getFileDownload(post.resumeFileId)} // Using your new download method!
-                            className="bg-teal-500 hover:bg-teal-600 text-slate-900 font-bold py-2 px-4 rounded-lg transition"
+                            // Updated: Full width button on mobile for easier tapping
+                            className="w-full sm:w-auto text-center bg-teal-500 hover:bg-teal-600 text-slate-900 font-bold py-2 px-6 rounded-lg transition"
                         >
                             Download
                         </a>
@@ -118,7 +130,8 @@ const getStatusTextColor = (status) => {
                 )}
 
                 {/* 4. Main Content (Rich Text) */}
-                <div className="browser-css text-gray-300 leading-relaxed">
+                {/* Updated: text-sm on mobile, text-base on desktop for readability */}
+                <div className="browser-css text-gray-300 leading-relaxed text-sm md:text-base overflow-hidden">
                     {parse(post.content)}
                 </div>
             </Container>

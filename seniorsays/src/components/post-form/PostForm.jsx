@@ -34,50 +34,33 @@ export default function PostForm({ post }) {
     const userData = useSelector((state) => state.auth.userData);
 
     const submit = async (data) => {
-
-
-const submit = async (data) => {
-    // 👇 DIAGNOSTIC LOGS (Yahan check karein)
-    console.log("------- DEBUG START -------");
-    console.log("1. Redux UserData:", userData);
-    
-    // Direct Appwrite se poocho: "Kya koi login hai?"
-    const liveUser = await appwriteService.getCurrentUser();
-    console.log("2. Live Appwrite User:", liveUser);
-    console.log("------- DEBUG END -------");
-
-    // Backup Logic
-    let currentUser = userData || liveUser; 
-
-    if (!currentUser) {
-        alert("Please login first!");
-        return;
-    }
-    
-    // ... baaki code ...
-};
-
-
-
-
-
-
+        // 👇 DIAGNOSTIC LOGS (Yahan check karein)
+        console.log("------- DEBUG START -------");
+        console.log("1. Redux UserData:", userData);
+        
+        // Direct Appwrite se poocho: "Kya koi login hai?"
+        // Note: Hum try catch block me check karenge niche taaki code clean rahe
+        console.log("------- DEBUG END -------");
 
         // 👇 CHANGE 1: Yahan humne 'userData' ko ek naye variable 'currentUser' mein dala
-    let currentUser = userData;
-    // Agar Redux khali hai (Refresh ki wajah se), toh Appwrite se poocho
-    if (!currentUser) {
-        try {
-            currentUser = await appwriteService.getCurrentUser();
-        } catch (error) {
-            console.log("User fetch failed");
+        let currentUser = userData;
+        
+        // Agar Redux khali hai (Refresh ki wajah se), toh Appwrite se poocho
+        if (!currentUser) {
+            try {
+                currentUser = await appwriteService.getCurrentUser();
+                console.log("2. Live Appwrite User fetched:", currentUser);
+            } catch (error) {
+                console.log("User fetch failed");
+            }
         }
-    }
-    // Ab check karo (Backup plan ke baad bhi user nahi mila toh roko)
-    if (!currentUser) {
-        alert("Please login first!");
-        return;
-    }
+
+        // Ab check karo (Backup plan ke baad bhi user nahi mila toh roko)
+        if (!currentUser) {
+            alert("Please login first!");
+            return;
+        }
+
         // 1. File Upload Logic (Resume)
         // Agar user ne file dali hai toh upload karo, nahi toh null rehne do
         // new resume file gets uploaded
@@ -117,13 +100,13 @@ const submit = async (data) => {
             // Direct Create kar do (Alert hata diya)
             const dbPost = await appwriteService.createPost({
                 ...data,
-                //                 Form mein user ne apna naam ya ID nahi bhara tha.
+                //                  Form mein user ne apna naam ya ID nahi bhara tha.
 
                 // Isliye hum Redux se current user ki ID nikal kar chupke se is packet mein jod rahe hain.
 
                 // Isse Database ko pata chalega ki "Yeh post kisne likha hai?"
-               userId: currentUser.$id,
-               authorName: currentUser.name
+                userId: currentUser.$id,
+                authorName: currentUser.name
             });
 
             if (dbPost) {
@@ -131,11 +114,11 @@ const submit = async (data) => {
             }
         }
     };
+
     //  usecallback used to put this function in cache 
     // Reason: React baar-baar page re-render karta hai. 
     // Agar hum useCallback nahi lagayenge, toh React har baar wo slugTransform function naye sire se banayega, 
     // jisse memory waste hogi aur infinite loop lag sakta hai.
-
     const slugTransform = useCallback((value) => {
         if (value && typeof value === "string")
             return value
@@ -146,9 +129,10 @@ const submit = async (data) => {
 
         return "";/*else return empty string*/
     }, []);
-// Role: of useEffect This is an automated bot that watches the Title field.
 
-// Action: As soon as the user types in the "Title" box, this code runs slugTransform and automatically fills the "Slug" box.
+    // Role: of useEffect This is an automated bot that watches the Title field.
+
+    // Action: As soon as the user types in the "Title" box, this code runs slugTransform and automatically fills the "Slug" box.
     React.useEffect(() => {
         const subscription = watch((value, { name }) => {
             if (name === "title") {
@@ -163,8 +147,11 @@ const submit = async (data) => {
 
     return (
         <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
-            {/* LEFT COLUMN */}
-            <div className="w-2/3 px-2">
+            {/* LEFT COLUMN 
+               - Mobile: w-full (Poori width)
+               - Desktop: lg:w-2/3 (66% width)
+            */}
+            <div className="w-full lg:w-2/3 px-2">
                 <Input
                     label="Title :"
                     placeholder="Ex: Amazon SDE-1 Interview"
@@ -206,8 +193,12 @@ const submit = async (data) => {
                  defaultValue={getValues("content")} />
             </div>
 
-            {/* RIGHT COLUMN */}
-            <div className="w-1/3 px-2">
+            {/* RIGHT COLUMN 
+               - Mobile: w-full (Poori width, Left wale ke neeche)
+               - Desktop: lg:w-1/3 (Side mein)
+               - mt-4 lg:mt-0: Mobile par thoda gap, Desktop par chipak ke.
+            */}
+            <div className="w-full lg:w-1/3 px-2 mt-4 lg:mt-0">
 
                 {/* 1. RESUME UPLOAD SECTION */}
                 <Input

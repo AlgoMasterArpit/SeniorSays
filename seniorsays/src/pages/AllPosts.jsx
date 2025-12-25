@@ -35,6 +35,7 @@ function AllPosts() {
                             $id={post.$id}
                             title={post.title}
                             companyName={post.companyName}
+                            authorName={post.authorName}
                             status={post.status}
                             jobType={post.roleType}
                             rating={post.difficulty}
@@ -49,3 +50,4 @@ function AllPosts() {
 }
 
 export default AllPosts 
+  
