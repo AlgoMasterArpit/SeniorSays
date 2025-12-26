@@ -2,34 +2,70 @@ import React from 'react'
 import { Editor } from '@tinymce/tinymce-react';
 import { Controller } from 'react-hook-form';
 import conf from '../conf/conf';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export default function RTE({name, control, label, defaultValue =""}) {
 
-
-  console.log("My API Key is:", conf.geminiApiKey);
-  // 🤖 AI Function: Text generate karne ke liye
-  const generateAIContent = async (prompt, currentText) => {
+  // 🛠️ Function 1: Button Actions ke liye (Grammar, Professional etc.)
+  const generateAIResponse = async (action, text) => {
     try {
-        const genAI = new GoogleGenerativeAI(conf.geminiApiKey);
-       // 👇 Updated Model Name
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        // AI ko context dein
-        const fullPrompt = `
-            Act as a professional editor for interview experiences.
-            User Request: ${prompt}
-            Original Text: "${currentText}"
-            
-            Return only the improved text, no explanations.
-        `;
-
-        const result = await model.generateContent(fullPrompt);
-        const response = await result.response;
-        return response.text();
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${conf.openaiApiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo",
+                messages: [
+                    {
+                        role: "system",
+                        content: "Act as a professional editor. Return only the improved version of the text, nothing else."
+                    },
+                    {
+                        role: "user",
+                        content: `Task: ${action}\nOriginal Text: "${text}"`
+                    }
+                ],
+                temperature: 0.7,
+            })
+        });
+        const data = await response.json();
+        return data.choices[0]?.message?.content || "Error generating text.";
     } catch (error) {
         console.error("AI Error:", error);
-        return "Error fetching AI response. Check API Key.";
+        return "Error connecting to AI.";
+    }
+  };
+
+  // 🚀 Function 2: Inline Suggestion ke liye (Sentence Completion)
+  const getAICompletion = async (textContext) => {
+    try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${conf.openaiApiKey}`
+            },
+            body: JSON.stringify({
+                model: "gpt-3.5-turbo", 
+                messages: [
+                    {
+                        role: "system",
+                        content: "Complete the user's sentence naturally. Keep it short (max 1 sentence)."
+                    },
+                    {
+                        role: "user",
+                        content: `Complete this text: "${textContext}"`
+                    }
+                ],
+                max_tokens: 30, // Chhota suggestion
+            })
+        });
+        const data = await response.json();
+        return data.choices[0]?.message?.content || "";
+    } catch (error) {
+        console.error("AI Error:", error);
+        return "";
     }
   };
 
@@ -47,28 +83,30 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                     init={{
                         height: 500,
                         menubar: true,
-                        
-                        // 👇 1. Toolbar mein 'ai_assistant' button add kiya
+                        plugins: [
+                            "image", "advlist", "autolink", "lists", "link", "charmap", "preview", "anchor", "searchreplace", "visualblocks", "code", "fullscreen", "insertdatetime", "media", "table", "help", "wordcount"
+                        ],
                         toolbar: "undo redo | blocks | image | bold italic | alignleft aligncenter | ai_assistant | help",
+                        content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
                         
-                        // 👇 2. Button ka Logic (Setup Function)
                         setup: (editor) => {
+                            
+                            // 🟢 FEATURE 1: AI Magic Button (Dialog Box)
                             editor.ui.registry.addButton('ai_assistant', {
-                                text: '✨ AI Magic', // Button ka naam
-                                tooltip: 'Improve content with AI',
+                                text: '✨ AI Magic',
+                                tooltip: 'Fix Grammar, Professional Tone, etc.',
                                 onAction: () => {
-                                    // 3. TinyMCE ka Dialog Box kholo
                                     editor.windowManager.open({
                                         title: 'SeniorSays AI Assistant 🤖',
                                         body: {
                                             type: 'panel',
                                             items: [
                                                 {
-                                                    type: 'selectbox', // Dropdown menu
+                                                    type: 'selectbox',
                                                     name: 'action',
-                                                    label: 'What should I do?',
+                                                    label: 'Choose Action',
                                                     items: [
-                                                        { value: 'Fix Grammar', text: 'Fix Grammar & Spelling' },
+                                                        { value: 'Fix Grammar & Spelling', text: 'Fix Grammar & Spelling' },
                                                         { value: 'Make Professional', text: 'Make Tone Professional' },
                                                         { value: 'Summarize', text: 'Summarize Selection' },
                                                         { value: 'Expand', text: 'Expand/Explain More' }
@@ -82,40 +120,55 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
                                         ],
                                         onSubmit: async (api) => {
                                             const data = api.getData();
-                                            const selectedContent = editor.selection.getContent(); // User ne jo select kiya
+                                            const selectedContent = editor.selection.getContent();
                                             
-                                            // Agar kuch select nahi kiya, toh error dikhao
                                             if(!selectedContent) {
-                                                editor.notificationManager.open({
-                                                    text: 'Please select some text first!',
-                                                    type: 'error'
-                                                });
+                                                editor.notificationManager.open({ text: 'Please select text first!', type: 'error' });
                                                 return;
                                             }
 
-                                            // Loading dikhao
-                                            editor.notificationManager.open({
-                                                text: 'AI is thinking... 🧠',
-                                                type: 'info',
-                                                timeout: 2000
-                                            });
+                                            editor.notificationManager.open({ text: 'AI is working... 🧠', type: 'info', timeout: 2000 });
                                             api.close();
 
-                                            // AI Call karein
-                                            const newText = await generateAIContent(data.action, selectedContent);
-                                            
-                                            // Result ko editor mein insert karo
+                                            const newText = await generateAIResponse(data.action, selectedContent);
                                             editor.insertContent(newText);
                                         }
                                     });
                                 }
                             });
+
+                            // 🟢 FEATURE 2: Inline Suggestion (Press '/')
+                            editor.ui.registry.addAutocompleter('ai_suggest', {
+                                ch: '/', 
+                                minChars: 0,
+                                columns: 1,
+                                fetch: async (pattern) => {
+                                    const currentContent = editor.getContent({ format: 'text' });
+                                    const lastFewWords = currentContent.slice(-100); 
+
+                                    return new Promise(async (resolve) => {
+                                        const suggestion = await getAICompletion(lastFewWords);
+                                        
+                                        if (suggestion) {
+                                            resolve([
+                                                {
+                                                    value: suggestion, 
+                                                    text: `🤖 ${suggestion}`, 
+                                                    icon: 'comment-add'
+                                                }
+                                            ]);
+                                        } else {
+                                            resolve([]);
+                                        }
+                                    });
+                                },
+                                onAction: (autocompleteApi, rng, value) => {
+                                    editor.selection.setRng(rng);
+                                    editor.insertContent(value);
+                                    autocompleteApi.hide();
+                                }
+                            });
                         },
-                        
-                        plugins: [
-                            "image", "advlist", "autolink", "lists", "link", "charmap", "preview", "anchor", "searchreplace", "visualblocks", "code", "fullscreen", "insertdatetime", "media", "table", "help", "wordcount"
-                        ],
-                        content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }"
                     }}
                     onEditorChange={onChange}
                 />

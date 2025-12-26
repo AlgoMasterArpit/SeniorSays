@@ -10,6 +10,6 @@ const conf = {
     appwriteCollectionId: String(import.meta.env.VITE_APPWRITE_COLLECTION_ID),
     appwriteBucketId: String(import.meta.env.VITE_APPWRITE_BUCKET_ID),
     tinymceApiKey: String(import.meta.env.VITE_TINYMCE_API_KEY),
-   geminiApiKey: String(import.meta.env.VITE_GEMINI_API_KEY),
+   openaiApiKey: String(import.meta.env.VITE_OPENAI_API_KEY),
 }
 export default conf
