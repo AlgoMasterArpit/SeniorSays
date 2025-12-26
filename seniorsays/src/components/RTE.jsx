@@ -5,7 +5,7 @@ import conf from '../conf/conf';
 
 export default function RTE({name, control, label, defaultValue =""}) {
 
-  // 🛠️ Function 1: Button Actions ke liye (Grammar, Professional etc.)
+  // 🛠️ Function 1: Button Actions ke liye
   const generateAIResponse = async (action, text) => {
     try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -17,14 +17,8 @@ export default function RTE({name, control, label, defaultValue =""}) {
             body: JSON.stringify({
                 model: "gpt-3.5-turbo",
                 messages: [
-                    {
-                        role: "system",
-                        content: "Act as a professional editor. Return only the improved version of the text, nothing else."
-                    },
-                    {
-                        role: "user",
-                        content: `Task: ${action}\nOriginal Text: "${text}"`
-                    }
+                    { role: "system", content: "Act as a professional editor. Return only the improved version of the text." },
+                    { role: "user", content: `Task: ${action}\nOriginal Text: "${text}"` }
                 ],
                 temperature: 0.7,
             })
@@ -37,7 +31,7 @@ export default function RTE({name, control, label, defaultValue =""}) {
     }
   };
 
-  // 🚀 Function 2: Inline Suggestion ke liye (Sentence Completion)
+  // 🚀 Function 2: Inline Suggestion ke liye
   const getAICompletion = async (textContext) => {
     try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -49,16 +43,10 @@ export default function RTE({name, control, label, defaultValue =""}) {
             body: JSON.stringify({
                 model: "gpt-3.5-turbo", 
                 messages: [
-                    {
-                        role: "system",
-                        content: "Complete the user's sentence naturally. Keep it short (max 1 sentence)."
-                    },
-                    {
-                        role: "user",
-                        content: `Complete this text: "${textContext}"`
-                    }
+                    { role: "system", content: "Complete the user's sentence naturally. Keep it short (max 1 sentence)." },
+                    { role: "user", content: `Complete this text: "${textContext}"` }
                 ],
-                max_tokens: 30, // Chhota suggestion
+                max_tokens: 30,
             })
         });
         const data = await response.json();
@@ -89,12 +77,13 @@ export default function RTE({name, control, label, defaultValue =""}) {
                         toolbar: "undo redo | blocks | image | bold italic | alignleft aligncenter | ai_assistant | help",
                         content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
                         
+                        // 👇 SETUP START
                         setup: (editor) => {
                             
-                            // 🟢 FEATURE 1: AI Magic Button (Dialog Box)
+                            // 🟢 FEATURE 1: AI Magic Button
                             editor.ui.registry.addButton('ai_assistant', {
                                 text: '✨ AI Magic',
-                                tooltip: 'Fix Grammar, Professional Tone, etc.',
+                                tooltip: 'Fix Grammar, Professional Tone',
                                 onAction: () => {
                                     editor.windowManager.open({
                                         title: 'SeniorSays AI Assistant 🤖',
@@ -126,10 +115,8 @@ export default function RTE({name, control, label, defaultValue =""}) {
                                                 editor.notificationManager.open({ text: 'Please select text first!', type: 'error' });
                                                 return;
                                             }
-
                                             editor.notificationManager.open({ text: 'AI is working... 🧠', type: 'info', timeout: 2000 });
                                             api.close();
-
                                             const newText = await generateAIResponse(data.action, selectedContent);
                                             editor.insertContent(newText);
                                         }
@@ -137,26 +124,26 @@ export default function RTE({name, control, label, defaultValue =""}) {
                                 }
                             });
 
-                            // 🟢 FEATURE 2: Inline Suggestion (Press '/')
+                            // 🟢 FEATURE 2: Inline Suggestion (Correctly placed inside setup)
                             editor.ui.registry.addAutocompleter('ai_suggest', {
-                                ch: '/', 
+                                trigger: '/', // ✅ Fixed for TinyMCE 6+
                                 minChars: 0,
                                 columns: 1,
-                                fetch: async (pattern) => {
-                                    const currentContent = editor.getContent({ format: 'text' });
-                                    const lastFewWords = currentContent.slice(-100); 
-
+                                fetch: (pattern) => {
                                     return new Promise(async (resolve) => {
+                                        console.log("🔥 AI Triggered with pattern:", pattern);
+                                        const currentContent = editor.getContent({ format: 'text' });
+                                        const lastFewWords = currentContent.slice(-100); 
+                                        
                                         const suggestion = await getAICompletion(lastFewWords);
+                                        console.log("AI Response:", suggestion);
                                         
                                         if (suggestion) {
-                                            resolve([
-                                                {
-                                                    value: suggestion, 
-                                                    text: `🤖 ${suggestion}`, 
-                                                    icon: 'comment-add'
-                                                }
-                                            ]);
+                                            resolve([{
+                                                value: suggestion, 
+                                                text: `🤖 ${suggestion}`, 
+                                                icon: 'comment-add'
+                                            }]);
                                         } else {
                                             resolve([]);
                                         }
@@ -168,7 +155,8 @@ export default function RTE({name, control, label, defaultValue =""}) {
                                     autocompleteApi.hide();
                                 }
                             });
-                        },
+
+                        }, // 👈 SETUP ENDS HERE (Correct)
                     }}
                     onEditorChange={onChange}
                 />
