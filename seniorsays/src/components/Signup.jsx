@@ -25,10 +25,21 @@ useEffect(() => {
         };
         clearSession();
     }, []);
-    const create = async (data) => {
+   const create = async (data) => {
         setError("")
         try {
+            // 1. Safety Logout: Submit dabate hi purana session clear karein
+            // Taaki "Session Active" wala error aaye hi nahi
+            try {
+                await authService.logout();
+            } catch (e) {
+                // Agar logout fail hua ya koi session nahi tha, toh ignore karein
+                console.log("No active session to logout");
+            }
+
+            // 2. Create Account
             const userData = await authService.createAccount(data)
+            
             if (userData) {
                 const session = await authService.login({ email: data.email, password: data.password })
                 if (session) {
@@ -38,10 +49,20 @@ useEffect(() => {
                 }
             }
         } catch (error) {
-            setError(error.message)
+            // ✅ ERROR HANDLING LOGIC
+            // Agar error "Session" se related hai, iska matlab account ban gaya hai 
+            // par auto-login fail hua. Unhe Login page bhej do.
+            const errorMessage = error.message.toLowerCase();
+            
+            if (errorMessage.includes("session") || errorMessage.includes("active")) {
+                console.log("Account created but session active. Redirecting to login.");
+                navigate("/login"); 
+            } else {
+                // Agar koi aur error hai (jaise "Email already exists"), toh error dikhao
+                setError(error.message)
+            }
         }
     }
-
     return (
         <div className="flex min-h-screen w-full bg-[#0f172a]">
             
