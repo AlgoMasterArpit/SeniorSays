@@ -14,7 +14,8 @@ import { useSelector } from "react-redux";
 // Maps('/post/amazon-interview') -> "Chalo bhai, ab apna post padh lo."
 
 export default function PostForm({ post }) {
-    const { register, handleSubmit, watch, setValue, control, getValues } = useForm({
+    // ✅ CHANGE: Added 'setError' and 'formState: { errors }' to handle duplicate title errors
+    const { register, handleSubmit, watch, setValue, control, getValues, setError, formState: { errors } } = useForm({
         defaultValues: {
             title: post?.title || "",
             slug: post?.$id || "",
@@ -61,56 +62,77 @@ export default function PostForm({ post }) {
             return;
         }
 
-        // 1. File Upload Logic (Resume)
-        // Agar user ne file dali hai toh upload karo, nahi toh null rehne do
-        // new resume file gets uploaded
-        const file = data.resume[0] ? await appwriteService.uploadFile(data.resume[0]) : null;
+        // ✅ Wrapped Database Operations in Try-Catch to handle Duplicates
+        try {
+            // 1. File Upload Logic (Resume)
+            // Agar user ne file dali hai toh upload karo, nahi toh null rehne do
+            // new resume file gets uploaded
+            const file = data.resume[0] ? await appwriteService.uploadFile(data.resume[0]) : null;
 
-        if (post) {
-            // --- EDIT MODE ---
-            // Agar nayi file aayi hai, toh purani delete karo
-            // Agar file hai (matlab user ne Naya resume upload kiya).
-            if (file && post.resumeFileId) {
-                appwriteService.deleteFile(post.resumeFileId);
+            if (post) {
+                // --- EDIT MODE ---
+                // Agar nayi file aayi hai, toh purani delete karo
+                // Agar file hai (matlab user ne Naya resume upload kiya).
+                if (file && post.resumeFileId) {
+                    appwriteService.deleteFile(post.resumeFileId);
+                }
+                //  post.$id is slug which tells ki konsa post update karna h
+
+                const dbPost = await appwriteService.updatePost(post.$id, {
+                    ...data,
+                    // Agar nayi file hai toh uski ID, nahi toh purani ID hi rakho
+                    //  yha override ki humne id resume ki in database
+                    resumeFileId: file ? file.$id : post.resumeFileId,
+                });
+
+                if (dbPost) {
+                    navigate(`/post/${dbPost.$id}`);
+                }
+
+            } else {
+                // --- CREATE MODE (New Logic) ---
+
+                // Ab hume check karne ki zaroorat nahi ki file hai ya nahi.
+                // Agar file hai toh ID milegi, nahi toh 'null' jayega.
+                // Storage bucket in appwrite  me se file  ki ID nikali
+                // Scenario B: Agar Senior ne Resume upload NAHI kiya (Optional tha), toh null set kar do.
+                const fileId = file ? file.$id : null;
+                data.resumeFileId = fileId;
+
+                // Difficulty ko number mein convert karo
+                data.difficulty = parseInt(data.difficulty);
+
+                // Direct Create kar do (Alert hata diya)
+                const dbPost = await appwriteService.createPost({
+                    ...data,
+                    //                  Form mein user ne apna naam ya ID nahi bhara tha.
+
+                    // Isliye hum Redux se current user ki ID nikal kar chupke se is packet mein jod rahe hain.
+
+                    // Isse Database ko pata chalega ki "Yeh post kisne likha hai?"
+                    userId: currentUser.$id,
+                    authorName: currentUser.name
+                });
+
+                if (dbPost) {
+                    navigate(`/post/${dbPost.$id}`);
+                }
             }
-            //  post.$id is slug which tells ki konsa post update karna h
-            const dbPost = await appwriteService.updatePost(post.$id, {
-                ...data,
-                // Agar nayi file hai toh uski ID, nahi toh purani ID hi rakho
-                //  yha override ki humne id resume ki in database
-                resumeFileId: file ? file.$id : post.resumeFileId,
-            });
-
-            if (dbPost) {
-                navigate(`/post/${dbPost.$id}`);
-            }
-        } else {
-            // --- CREATE MODE (New Logic) ---
-
-            // Ab hume check karne ki zaroorat nahi ki file hai ya nahi.
-            // Agar file hai toh ID milegi, nahi toh 'null' jayega.
-            // Storage bucket in appwrite  me se file  ki ID nikali
-            // Scenario B: Agar Senior ne Resume upload NAHI kiya (Optional tha), toh null set kar do.
-            const fileId = file ? file.$id : null;
-            data.resumeFileId = fileId;
-
-            // Difficulty ko number mein convert karo
-            data.difficulty = parseInt(data.difficulty);
-
-            // Direct Create kar do (Alert hata diya)
-            const dbPost = await appwriteService.createPost({
-                ...data,
-                //                  Form mein user ne apna naam ya ID nahi bhara tha.
-
-                // Isliye hum Redux se current user ki ID nikal kar chupke se is packet mein jod rahe hain.
-
-                // Isse Database ko pata chalega ki "Yeh post kisne likha hai?"
-                userId: currentUser.$id,
-                authorName: currentUser.name
-            });
-
-            if (dbPost) {
-                navigate(`/post/${dbPost.$id}`);
+        } catch (error) {
+            console.log("Appwrite Error:", error);
+            
+            // ✅ ERROR HANDLING: Catch Duplicate ID/Title Error
+            // Appwrite throws 409 or message containing "already exists" for duplicate IDs
+            if (error.code === 409 || error.message.includes("already exists") || error.message.includes("Document with the requested ID already exists")) {
+                setError("title", {
+                    type: "manual",
+                    message: "⚠️ A post with this title already exists. Please change the title slightly (e.g., add year '2024')."
+                });
+                // Scroll to top so user sees the error
+                window.scrollTo(0,0);
+            } else {
+                // Show generic error for other issues
+                alert(error.message);
             }
         }
     };
@@ -148,16 +170,26 @@ export default function PostForm({ post }) {
     return (
         <form onSubmit={handleSubmit(submit)} className="flex flex-wrap">
             {/* LEFT COLUMN 
-               - Mobile: w-full (Poori width)
-               - Desktop: lg:w-2/3 (66% width)
+                - Mobile: w-full (Poori width)
+                - Desktop: lg:w-2/3 (66% width)
             */}
             <div className="w-full lg:w-2/3 px-2">
+                
+                {/* TITLE INPUT */}
                 <Input
                     label="Title :"
                     placeholder="Ex: Amazon SDE-1 Interview"
-                    className="mb-4"
+                    className="mb-1" // Reduced margin to fit error message
                     {...register("title", { required: true })}
                 />
+                {/* ✅ CHANGE: Error Message Display Area */}
+                {errors.title && (
+                    <p className="text-red-500 text-sm font-semibold mb-4 bg-red-100 p-2 rounded border border-red-400">
+                        {errors.title.message}
+                    </p>
+                )}
+                {!errors.title && <div className="mb-4"></div>} {/* Spacer if no error */}
+
 
                 <Input
                     label="Slug :"
@@ -194,9 +226,9 @@ export default function PostForm({ post }) {
             </div>
 
             {/* RIGHT COLUMN 
-               - Mobile: w-full (Poori width, Left wale ke neeche)
-               - Desktop: lg:w-1/3 (Side mein)
-               - mt-4 lg:mt-0: Mobile par thoda gap, Desktop par chipak ke.
+                - Mobile: w-full (Poori width, Left wale ke neeche)
+                - Desktop: lg:w-1/3 (Side mein)
+                - mt-4 lg:mt-0: Mobile par thoda gap, Desktop par chipak ke.
             */}
             <div className="w-full lg:w-1/3 px-2 mt-4 lg:mt-0">
 
