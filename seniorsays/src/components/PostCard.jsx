@@ -26,7 +26,7 @@ function PostCard({
     return (
 
         //    {`/post/${$id}`} Isi se agle page (Post.jsx) ko pata chalega ki kaunsa experience kholna hai.
-        <Link to={`/post/${$id}`} className='w-full block group'>
+        <Link to={`/post/${$id}`} className='w-full h-full block group'>
 
             {/* group: Ye ek Tailwind trick hai. Humne poore card ko group bola hai, taaki jab hum card par hover karein, toh andar ka Arrow move kare. */}
             <div className='bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-teal-400 transition-all duration-300 hover:-translate-y-1 shadow-lg h-full flex flex-col justify-between'>
