@@ -83,18 +83,21 @@ export class Service {
     }
 
     // Get a SINGLE post (for the "Read Full Story" page)
-    async getPost(slug) {
-        try {
-            return await this.databases.getDocument(
-                conf.appwriteDatabaseId,
-                conf.appwriteCollectionId,
-                slug
-            )
-        } catch (error) {
-            console.log("Appwrite service :: getPost :: error", error);
-            return false;
-        }
+  // appwrite/config.js ke andar
+async getPost(slug){
+    try {
+        return await this.databases.getDocument(
+            conf.appwriteDatabaseId,
+            conf.appwriteCollectionId,
+            slug
+        )
+    } catch (error) {
+        console.log("Appwrite serive :: getPost :: error", error);
+        // Important: Yahan false return mat karna agar error throw ho raha hai, 
+        // kyunki hum 'try-catch' mein error expect kar rahe hain form ke andar.
+        throw error; 
     }
+}
 
     // Get ALL posts (for the Dashboard)
     //  status active matlab senior ne post kardia , inactive matlab usne save as draft kia h and vo baad me jab aayega toh usey vhi aadha filled 

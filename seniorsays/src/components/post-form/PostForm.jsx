@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button, Input, RTE, Select } from "..";
 import appwriteService from "../../appwrite/config";
@@ -14,8 +14,8 @@ import { useSelector } from "react-redux";
 // Maps('/post/amazon-interview') -> "Chalo bhai, ab apna post padh lo."
 
 export default function PostForm({ post }) {
-    // ✅ CHANGE: Added 'setError' and 'formState: { errors }' to handle duplicate title errors
-    const { register, handleSubmit, watch, setValue, control, getValues, setError, formState: { errors } } = useForm({
+    // ✅ CHANGE: Added 'setError', 'clearErrors' and 'formState: { errors }' to handle duplicate title errors
+    const { register, handleSubmit, watch, setValue, control, getValues, setError, clearErrors, formState: { errors } } = useForm({
         defaultValues: {
             title: post?.title || "",
             slug: post?.$id || "",
@@ -33,6 +33,66 @@ export default function PostForm({ post }) {
     const navigate = useNavigate();
     // state.auth.userData: Redux store (jo humara global locker hai) se current user ki ID nikal kar lata hai.
     const userData = useSelector((state) => state.auth.userData);
+
+    //  usecallback used to put this function in cache 
+    // Reason: React baar-baar page re-render karta hai. 
+    // Agar hum useCallback nahi lagayenge, toh React har baar wo slugTransform function naye sire se banayega, 
+    // jisse memory waste hogi aur infinite loop lag sakta hai.
+    const slugTransform = useCallback((value) => {
+        if (value && typeof value === "string")
+            return value
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-zA-Z\d\s]+/g, "-")
+                .replace(/\s/g, "-");
+
+        return "";/*else return empty string*/
+    }, []);
+
+    // 👇 NEW LOGIC: Real-time Title Check with Debouncing
+    // Watch the title field for changes
+    const watchedTitle = watch("title");
+
+    useEffect(() => {
+        // Agar title khali hai, toh kuch mat karo
+        if (!watchedTitle) return;
+
+        // 1. Slug generate karo based on current title
+        const generatedSlug = slugTransform(watchedTitle);
+
+        // 2. Debounce Timer (500ms ka wait karega taaki har keystroke pe API hit na ho)
+        const timer = setTimeout(async () => {
+            
+            // Edit Mode Check: Agar hum usi post ko edit kar rahe hain jo pehle se open hai, toh error mat dikhao
+            if (post && generatedSlug === post.$id) return;
+
+            if (generatedSlug) {
+                try {
+                    // API HIT: Check karein ki is slug (ID) se koi post hai kya?
+                    // getPost function usually single post lata hai ID se.
+                    // Note: Ensure appwriteService.getPost(slug) exists and returns document or throws error
+                    const existingPost = await appwriteService.getPost(generatedSlug);
+
+                    if (existingPost) {
+                        // Agar post mil gayi -> Matlab Title Taken hai -> ERROR Set karo
+                        setError("title", {
+                            type: "manual",
+                            message: "⚠️ This title is already taken. Please add year or modify slightly."
+                        });
+                    }
+                } catch (error) {
+                    // Agar Error aaya (Matlab Post nahi mili aka 404 Not Found)
+                    // Toh iska matlab Title Unique hai -> Error hata do
+                    clearErrors("title");
+                }
+            }
+        }, 500); // 500ms delay
+
+        // Cleanup function: Agar user 500ms se pehle dubara type kar de, toh purana timer cancel karo
+        return () => clearTimeout(timer);
+
+    }, [watchedTitle, slugTransform, post, setError, clearErrors]);
+
 
     const submit = async (data) => {
         // 👇 DIAGNOSTIC LOGS (Yahan check karein)
@@ -121,7 +181,7 @@ export default function PostForm({ post }) {
         } catch (error) {
             console.log("Appwrite Error:", error);
             
-            // ✅ ERROR HANDLING: Catch Duplicate ID/Title Error
+            // ✅ ERROR HANDLING: Catch Duplicate ID/Title Error (Fallback if frontend check fails)
             // Appwrite throws 409 or message containing "already exists" for duplicate IDs
             if (error.code === 409 || error.message.includes("already exists") || error.message.includes("Document with the requested ID already exists")) {
                 setError("title", {
@@ -136,21 +196,6 @@ export default function PostForm({ post }) {
             }
         }
     };
-
-    //  usecallback used to put this function in cache 
-    // Reason: React baar-baar page re-render karta hai. 
-    // Agar hum useCallback nahi lagayenge, toh React har baar wo slugTransform function naye sire se banayega, 
-    // jisse memory waste hogi aur infinite loop lag sakta hai.
-    const slugTransform = useCallback((value) => {
-        if (value && typeof value === "string")
-            return value
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-zA-Z\d\s]+/g, "-")
-                .replace(/\s/g, "-");
-
-        return "";/*else return empty string*/
-    }, []);
 
     // Role: of useEffect This is an automated bot that watches the Title field.
 
