@@ -44,7 +44,10 @@ export default function PostForm({ post }) {
                 .trim()
                 .toLowerCase()
                 .replace(/[^a-zA-Z\d\s]+/g, "-")
-                .replace(/\s/g, "-");
+                .replace(/\s/g, "-")
+                .replace(/-+/g, "-")      // multiple dashes → ek
+                .replace(/^-|-$/g, "")    // aage-peeche ke dash hatao
+                .slice(0, 36) ;           // teesri, length cap
 
         return "";/*else return empty string*/
     }, []);
