@@ -84,9 +84,11 @@ export default function PostForm({ post }) {
                         });
                     }
                 } catch (error) {
-                    // Agar Error aaya (Matlab Post nahi mili aka 404 Not Found)
-                    // Toh iska matlab Title Unique hai -> Error hata do
-                    clearErrors("title");
+                    // Sirf 404 (Document not found) ka matlab hai "Title Unique hai" -> Error hata do
+                    // Network fail / server down (code 0, 5xx) me humein PATA HI NAHI hai ki title free hai ya nahi,
+                    // toh title ko "available" declare karna galat hai -> error state ko chhedo mat.
+                    // Submit ke waqt 409 wala catch fallback bacha lega.
+                    if (error?.code === 404) clearErrors("title");
                 }
             }
         }, 500); // 500ms delay
