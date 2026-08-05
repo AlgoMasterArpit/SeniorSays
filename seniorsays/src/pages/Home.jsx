@@ -1,17 +1,32 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import appwriteService from "../appwrite/config";
-import {Container, PostCard} from '../components'
+import {Container, PostCard, Pagination} from '../components'
 import { Link } from 'react-router-dom';
 // 👇 IMPORT NEW COMPONENT
-import NoResults from '../components/NoResults'; 
+import NoResults from '../components/NoResults';
+import { Query } from 'appwrite';
+import { paginate } from '../utils/paginate';
+
+// Ek hi request me itne posts laate hain. Appwrite ka default 25 tha (chhupa hua),
+// isliye 26th post kabhi dikhti hi nahi thi — na list me, na search me.
+const FETCH_LIMIT = 100;
+// Ek page pe itne cards dikhenge
+const POSTS_PER_PAGE = 10;
 
 function Home() {
     const [posts, setPosts] = useState([])
     // 👇 NEW STATE FOR SEARCH
-    const [searchQuery, setSearchQuery] = useState('') 
+    const [searchQuery, setSearchQuery] = useState('')
+    const [page, setPage] = useState(1)
+    // Page badalne par list ke top pe scroll karne ke liye (hero dobara na dikhe)
+    const listRef = useRef(null)
 
     useEffect(() => {
-        appwriteService.getPosts().then((posts) => {
+        appwriteService.getPosts([
+            Query.equal("status", "active"),
+            Query.orderDesc("$createdAt"),   // naye posts pehle
+            Query.limit(FETCH_LIMIT),        // 👈 25 ka chhupa hua cap yahan tootta hai
+        ]).then((posts) => {
             if (posts) {
                 setPosts(posts.documents)
             }
@@ -23,10 +38,19 @@ function Home() {
         const query = searchQuery.toLowerCase();
         return (
             post.companyName?.toLowerCase().includes(query) ||
-            post.title?.toLowerCase().includes(query) || 
+            post.title?.toLowerCase().includes(query) ||
             post.roleType?.toLowerCase().includes(query)
         );
     });
+
+    // 👇 PAGINATION: search ke BAAD slice hoti hai, warna search sirf current page pe chalti
+    const { visible: visiblePosts, currentPage, totalPages } =
+        paginate(filteredPosts, page, POSTS_PER_PAGE);
+
+    const goToPage = (nextPage) => {
+        setPage(nextPage);
+        listRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
 
     return (
         <div className='w-full bg-slate-900 min-h-screen'>
@@ -71,7 +95,10 @@ function Home() {
                                     className="block w-full pl-10 pr-3 py-3 border border-slate-700 rounded-lg leading-5 bg-slate-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm transition-colors"
                                     placeholder="Search companies (e.g. Amazon, TCS)..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        setPage(1);   // nayi search = pehle page se shuru
+                                    }}
                                 />
                             </div>
                         </div>
@@ -96,11 +123,13 @@ function Home() {
             </div>
 
             {/* LATEST POSTS SECTION */}
-            <div className='py-8 lg:py-12 border-t border-slate-800'>
+            <div ref={listRef} className='py-8 lg:py-12 border-t border-slate-800 scroll-mt-4'>
                 <Container>
                     <div className="flex items-center justify-between mb-6 lg:mb-8 px-2">
                         <h2 className="text-xl sm:text-2xl font-bold text-white">
-                           {searchQuery ? `Results for "${searchQuery}"` : "Latest Stories"}
+                           {searchQuery
+                                ? `Results for "${searchQuery}" (${filteredPosts.length})`
+                                : "Latest Stories"}
                         </h2>
                         {!searchQuery && (
                             <Link to="/all-posts" className="text-teal-400 hover:text-teal-300 text-sm">View All</Link>
@@ -108,9 +137,9 @@ function Home() {
                     </div>
 
                     <div className='flex flex-wrap -mx-2'>
-                        {/* 👇 UPDATED RENDERING LOGIC */}
-                        {filteredPosts.length > 0 ? (
-                            filteredPosts.map((post) => (
+                        {/* 👇 UPDATED RENDERING LOGIC — visiblePosts = current page ke 10 cards */}
+                        {visiblePosts.length > 0 ? (
+                            visiblePosts.map((post) => (
                                 <div key={post.$id} className='p-2 w-full sm:w-1/2 lg:w-1/3 xl:w-1/4'>
                                     <PostCard 
                                         $id={post.$id}
@@ -136,6 +165,13 @@ function Home() {
                             )
                         )}
                     </div>
+
+                    {/* 👇 PAGINATION (ek hi page ho toh khud ko render nahi karta) */}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={goToPage}
+                    />
                 </Container>
             </div>
         </div>
