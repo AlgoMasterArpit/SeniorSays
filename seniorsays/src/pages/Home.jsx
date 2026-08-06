@@ -1,56 +1,17 @@
-import React, {useEffect, useRef, useState} from 'react'
-import appwriteService from "../appwrite/config";
+import React from 'react'
 import {Container, PostCard, Pagination} from '../components'
 import { Link } from 'react-router-dom';
 // 👇 IMPORT NEW COMPONENT
 import NoResults from '../components/NoResults';
-import { Query } from 'appwrite';
-import { paginate } from '../utils/paginate';
-
-// Ek hi request me itne posts laate hain. Appwrite ka default 25 tha (chhupa hua),
-// isliye 26th post kabhi dikhti hi nahi thi — na list me, na search me.
-const FETCH_LIMIT = 100;
-// Ek page pe itne cards dikhenge
-const POSTS_PER_PAGE = 10;
+import { usePosts } from '../hooks/usePosts';
 
 function Home() {
-    const [posts, setPosts] = useState([])
-    // 👇 NEW STATE FOR SEARCH
-    const [searchQuery, setSearchQuery] = useState('')
-    const [page, setPage] = useState(1)
-    // Page badalne par list ke top pe scroll karne ke liye (hero dobara na dikhe)
-    const listRef = useRef(null)
-
-    useEffect(() => {
-        appwriteService.getPosts([
-            Query.equal("status", "active"),
-            Query.orderDesc("$createdAt"),   // naye posts pehle
-            Query.limit(FETCH_LIMIT),        // 👈 25 ka chhupa hua cap yahan tootta hai
-        ]).then((posts) => {
-            if (posts) {
-                setPosts(posts.documents)
-            }
-        })
-    }, [])
-
-    // 👇 FILTERING LOGIC
-    const filteredPosts = posts.filter((post) => {
-        const query = searchQuery.toLowerCase();
-        return (
-            post.companyName?.toLowerCase().includes(query) ||
-            post.title?.toLowerCase().includes(query) ||
-            post.roleType?.toLowerCase().includes(query)
-        );
-    });
-
-    // 👇 PAGINATION: search ke BAAD slice hoti hai, warna search sirf current page pe chalti
-    const { visible: visiblePosts, currentPage, totalPages } =
-        paginate(filteredPosts, page, POSTS_PER_PAGE);
-
-    const goToPage = (nextPage) => {
-        setPage(nextPage);
-        listRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    // Data, search aur pagination — sab hook me. AllPosts bhi yahi use karta hai.
+    const {
+        visiblePosts, filteredPosts,
+        searchQuery, setSearchQuery,
+        currentPage, totalPages, goToPage, listRef,
+    } = usePosts();
 
     return (
         <div className='w-full bg-slate-900 min-h-screen'>
@@ -95,10 +56,7 @@ function Home() {
                                     className="block w-full pl-10 pr-3 py-3 border border-slate-700 rounded-lg leading-5 bg-slate-800/50 text-gray-300 placeholder-gray-500 focus:outline-none focus:bg-slate-800 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 sm:text-sm transition-colors"
                                     placeholder="Search companies (e.g. Amazon, TCS)..."
                                     value={searchQuery}
-                                    onChange={(e) => {
-                                        setSearchQuery(e.target.value);
-                                        setPage(1);   // nayi search = pehle page se shuru
-                                    }}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
                         </div>
