@@ -42,7 +42,7 @@ export class Service {
             )
         } catch (error) {
             console.log("Appwrite service :: createPost :: error", error);
-            return false;
+            throw error;
         }
     }
 //  pehle i want ki doc id paas ho toh slug pehle paas kia
@@ -65,6 +65,7 @@ export class Service {
             )
         } catch (error) {
             console.log("Appwrite service :: updatePost :: error", error);
+            throw error;
         }
     }
 
@@ -104,13 +105,42 @@ async getPost(slug){
     //  form milega , ye sab we handle toh set status and save as draft in react hook form 
 
     //  status active jin post ka hoga vhi post will come on dashboard so filter lag tha h on status toh   appwrite me database me index me  status bnale 
+    //  ⚠️ Ek listDocuments call SAARE posts nahi deta:
+    //     - limit na do toh Appwrite chupchaap 25 pe kaat deta hai (na error, na warning)
+    //     - limit do toh bhi ek request me max 5000 hi milte hain
+    //  Isliye hum page-by-page loop karke sab uthate hain. DB me 200 hain toh 200 aayenge,
+    //  1000 hain toh 1000 (2 aur 10 requests me).
+    //  Return: seedha ARRAY (pehle {total, documents} object aata tha).
     async getPosts(queries = [Query.equal("status", "active")]) {
+        const PER_REQUEST = 100;   // ek request me itne, poore total pe koi cap nahi
+        const all = [];
+        let cursor = null;
+
         try {
-            return await this.databases.listDocuments(
-                conf.appwriteDatabaseId,
-                conf.appwriteCollectionId,
-                queries,
-            )
+            for (;;) {
+                const pageQueries = [...queries, Query.limit(PER_REQUEST)];
+
+                //  cursorAfter, offset se behtar hai:
+                //   1. offset ka apna max hota hai, cursor ka nahi
+                //   2. loop ke beech me koi naya post ban jaaye toh offset shift ho jaata hai
+                //      aur ek post skip ya duplicate ho jaati hai — cursor me ye problem nahi
+                if (cursor) pageQueries.push(Query.cursorAfter(cursor));
+
+                const res = await this.databases.listDocuments(
+                    conf.appwriteDatabaseId,
+                    conf.appwriteCollectionId,
+                    pageQueries,   
+                );
+
+                all.push(...res.documents);
+
+                //  Poora page nahi bhara = ye aakhri page tha, ruk jao
+                if (res.documents.length < PER_REQUEST) break;
+
+                cursor = res.documents[res.documents.length - 1].$id;
+            }
+
+            return all;
         } catch (error) {
             console.log("Appwrite service :: getPosts :: error", error);
             return false;/* for safe we write it ki agar ek bhi value return nhi hui toh*/
@@ -131,7 +161,7 @@ async getPost(slug){
             )
         } catch (error) {
             console.log("Appwrite service :: uploadFile :: error", error);
-            return false;
+            throw error;
         }
     }
 
