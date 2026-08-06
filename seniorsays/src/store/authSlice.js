@@ -12,8 +12,10 @@ const authSlice = createSlice({
     reducers: {
         login: (state, action) => {
             state.status = true;
-            // 👇 Yahan dhyan dein: Kya ye .userData hai ya direct payload?
-            state.userData = action.payload.userData || action.payload; 
+            //  Payload seedha Appwrite ka user object hota hai (account.get() ka result) —
+            //  { $id, name, email, ... }. Teeno dispatch sites (App, Login, Signup) yahi
+            //  bhejte hain, aur consumers userData.$id padhte hain.
+            state.userData = action.payload;
         },
         logout: (state) => {
             state.status = false;
