@@ -2,6 +2,9 @@ import React, { useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button, Input, RTE, Select } from "..";
 import appwriteService from "../../appwrite/config";
+//  Alag service hai: config.js me posts/files ke methods hain, current user
+//  auth.js deta hai. Isliye getCurrentuser appwriteService pe nahi milta.
+import authService from "../../appwrite/auth";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 // . import { useNavigate } from "react-router-dom";
@@ -114,10 +117,12 @@ export default function PostForm({ post }) {
         // Agar Redux khali hai (Refresh ki wajah se), toh Appwrite se poocho
         if (!currentUser) {
             try {
-                currentUser = await appwriteService.getCurrentUser();
+                currentUser = await authService.getCurrentuser();
                 console.log("2. Live Appwrite User fetched:", currentUser);
             } catch (error) {
-                console.log("User fetch failed");
+                //  error ko log karna zaroori hai — pehle sirf "User fetch failed"
+                //  chhapta tha, isliye galat service call karne wali bug chhupi rahi
+                console.log("User fetch failed", error);
             }
         }
 
