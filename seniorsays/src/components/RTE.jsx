@@ -5,7 +5,7 @@ import conf from '../conf/conf';
 
 export default function RTE({name, control, label, defaultValue =""}) {
 
-  // 🛠️ Function 1: Button Actions ke liye
+  // 🛠️ AI Magic button ke liye (toolbar se text select karke chalta hai)
   const generateAIResponse = async (action, text) => {
     try {
         const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -28,32 +28,6 @@ export default function RTE({name, control, label, defaultValue =""}) {
     } catch (error) {
         console.error("AI Error:", error);
         return "Error connecting to AI.";
-    }
-  };
-
-  // 🚀 Function 2: Inline Suggestion ke liye
-  const getAICompletion = async (textContext) => {
-    try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${conf.openaiApiKey}`
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo", 
-                messages: [
-                    { role: "system", content: "Complete the user's sentence naturally. Keep it short (max 1 sentence)." },
-                    { role: "user", content: `Complete this text: "${textContext}"` }
-                ],
-                max_tokens: 30,
-            })
-        });
-        const data = await response.json();
-        return data.choices[0]?.message?.content || "";
-    } catch (error) {
-        console.error("AI Error:", error);
-        return "";
     }
   };
 
@@ -80,7 +54,7 @@ export default function RTE({name, control, label, defaultValue =""}) {
                         // 👇 SETUP START
                         setup: (editor) => {
                             
-                            // 🟢 FEATURE 1: AI Magic Button
+                            // 🟢 AI Magic Button
                             editor.ui.registry.addButton('ai_assistant', {
                                 text: '✨ AI Magic',
                                 tooltip: 'Fix Grammar, Professional Tone',
@@ -121,38 +95,6 @@ export default function RTE({name, control, label, defaultValue =""}) {
                                             editor.insertContent(newText);
                                         }
                                     });
-                                }
-                            });
-
-                            // 🟢 FEATURE 2: Inline Suggestion (Correctly placed inside setup)
-                            editor.ui.registry.addAutocompleter('ai_suggest', {
-                                trigger: '/', // ✅ Fixed for TinyMCE 6+
-                                minChars: 0,
-                                columns: 1,
-                                fetch: (pattern) => {
-                                    return new Promise(async (resolve) => {
-                                        console.log("🔥 AI Triggered with pattern:", pattern);
-                                        const currentContent = editor.getContent({ format: 'text' });
-                                        const lastFewWords = currentContent.slice(-100); 
-                                        
-                                        const suggestion = await getAICompletion(lastFewWords);
-                                        console.log("AI Response:", suggestion);
-                                        
-                                        if (suggestion) {
-                                            resolve([{
-                                                value: suggestion, 
-                                                text: `🤖 ${suggestion}`, 
-                                                icon: 'comment-add'
-                                            }]);
-                                        } else {
-                                            resolve([]);
-                                        }
-                                    });
-                                },
-                                onAction: (autocompleteApi, rng, value) => {
-                                    editor.selection.setRng(rng);
-                                    editor.insertContent(value);
-                                    autocompleteApi.hide();
                                 }
                             });
 
