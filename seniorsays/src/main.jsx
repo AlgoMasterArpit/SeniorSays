@@ -14,6 +14,7 @@ import Signup from './pages/Signup.jsx'
 import EditPost from './pages/EditPost.jsx'
 import Post from './pages/Post.jsx'
 import AllPosts from './pages/AllPosts.jsx'
+import MyPosts from './pages/MyPosts.jsx'
 
 // 🛣️ Router Configuration
 const router = createBrowserRouter([
@@ -49,6 +50,17 @@ const router = createBrowserRouter([
                 <AuthLayout authentication={true}>
                     {" "}
                     <AllPosts />
+                </AuthLayout>
+            ),
+        },
+        {
+            // Senior ke apne posts (draft + published). Login zaroori — dusre ka
+            // draft dikhne ka sawaal hi nahi, hook sirf uski apni userId query karta hai
+            path: "/my-posts",
+            element: (
+                <AuthLayout authentication={true}>
+                    {" "}
+                    <MyPosts />
                 </AuthLayout>
             ),
         },
