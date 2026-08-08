@@ -2,34 +2,9 @@ import React from 'react'
 import { Editor } from '@tinymce/tinymce-react';
 import { Controller } from 'react-hook-form';
 import conf from '../conf/conf';
+import { aiRewrite } from '../utils/aiRewrite';
 
 export default function RTE({name, control, label, defaultValue =""}) {
-
-  // 🛠️ AI Magic button ke liye (toolbar se text select karke chalta hai)
-  const generateAIResponse = async (action, text) => {
-    try {
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${conf.openaiApiKey}`
-            },
-            body: JSON.stringify({
-                model: "gpt-3.5-turbo",
-                messages: [
-                    { role: "system", content: "Act as a professional editor. Return only the improved version of the text." },
-                    { role: "user", content: `Task: ${action}\nOriginal Text: "${text}"` }
-                ],
-                temperature: 0.7,
-            })
-        });
-        const data = await response.json();
-        return data.choices[0]?.message?.content || "Error generating text.";
-    } catch (error) {
-        console.error("AI Error:", error);
-        return "Error connecting to AI.";
-    }
-  };
 
   return (
     <div className='w-full'> 
@@ -89,10 +64,23 @@ export default function RTE({name, control, label, defaultValue =""}) {
                                                 editor.notificationManager.open({ text: 'Please select text first!', type: 'error' });
                                                 return;
                                             }
-                                            editor.notificationManager.open({ text: 'AI is working... 🧠', type: 'info', timeout: 2000 });
                                             api.close();
-                                            const newText = await generateAIResponse(data.action, selectedContent);
-                                            editor.insertContent(newText);
+                                            //  timeout: 0 = apne aap band nahi hoga. Purana 2000ms request
+                                            //  se pehle hi gayab ho jaata tha aur user ko lagta tha kuch hua hi nahi.
+                                            const working = editor.notificationManager.open({ text: 'AI is working... 🧠', type: 'info', timeout: 0 });
+
+                                            try {
+                                                const newText = await aiRewrite(data.action, selectedContent, conf.openaiApiKey);
+                                                editor.insertContent(newText);
+                                            } catch (error) {
+                                                //  Yahan insertContent JAAN BOOJH KE nahi hai. insertContent
+                                                //  selection ko replace karta hai — fail hone pe kuch bhi insert
+                                                //  karna user ka chuna hua text mita dega. Sirf batao, chhedo mat.
+                                                console.error("AI Error:", error);
+                                                editor.notificationManager.open({ text: `AI fail hui: ${error.message}`, type: 'error' });
+                                            } finally {
+                                                working.close();
+                                            }
                                         }
                                     });
                                 }
