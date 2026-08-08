@@ -1,32 +1,17 @@
-import React, {useEffect, useState} from 'react'
-import appwriteService from "../appwrite/config";
-import {Container, PostCard} from '../components'
+import React from 'react'
+import {Container, PostCard, Pagination} from '../components'
 import { Link } from 'react-router-dom';
 // 👇 IMPORT NEW COMPONENT
-import NoResults from '../components/NoResults'; 
+import NoResults from '../components/NoResults';
+import { usePosts } from '../hooks/usePosts';
 
 function Home() {
-    const [posts, setPosts] = useState([])
-    // 👇 NEW STATE FOR SEARCH
-    const [searchQuery, setSearchQuery] = useState('') 
-
-    useEffect(() => {
-        appwriteService.getPosts().then((posts) => {
-            if (posts) {
-                setPosts(posts.documents)
-            }
-        })
-    }, [])
-
-    // 👇 FILTERING LOGIC
-    const filteredPosts = posts.filter((post) => {
-        const query = searchQuery.toLowerCase();
-        return (
-            post.companyName?.toLowerCase().includes(query) ||
-            post.title?.toLowerCase().includes(query) || 
-            post.roleType?.toLowerCase().includes(query)
-        );
-    });
+    // Data, search aur pagination — sab hook me. AllPosts bhi yahi use karta hai.
+    const {
+        visiblePosts, filteredPosts,
+        searchQuery, setSearchQuery,
+        currentPage, totalPages, goToPage, listRef,
+    } = usePosts();
 
     return (
         <div className='w-full bg-slate-900 min-h-screen'>
@@ -96,11 +81,13 @@ function Home() {
             </div>
 
             {/* LATEST POSTS SECTION */}
-            <div className='py-8 lg:py-12 border-t border-slate-800'>
+            <div ref={listRef} className='py-8 lg:py-12 border-t border-slate-800 scroll-mt-4'>
                 <Container>
                     <div className="flex items-center justify-between mb-6 lg:mb-8 px-2">
                         <h2 className="text-xl sm:text-2xl font-bold text-white">
-                           {searchQuery ? `Results for "${searchQuery}"` : "Latest Stories"}
+                           {searchQuery
+                                ? `Results for "${searchQuery}" (${filteredPosts.length})`
+                                : "Latest Stories"}
                         </h2>
                         {!searchQuery && (
                             <Link to="/all-posts" className="text-teal-400 hover:text-teal-300 text-sm">View All</Link>
@@ -108,9 +95,9 @@ function Home() {
                     </div>
 
                     <div className='flex flex-wrap -mx-2'>
-                        {/* 👇 UPDATED RENDERING LOGIC */}
-                        {filteredPosts.length > 0 ? (
-                            filteredPosts.map((post) => (
+                        {/* 👇 UPDATED RENDERING LOGIC — visiblePosts = current page ke 10 cards */}
+                        {visiblePosts.length > 0 ? (
+                            visiblePosts.map((post) => (
                                 <div key={post.$id} className='p-2 w-full sm:w-1/2 lg:w-1/3 xl:w-1/4'>
                                     <PostCard 
                                         $id={post.$id}
@@ -136,6 +123,13 @@ function Home() {
                             )
                         )}
                     </div>
+
+                    {/* 👇 PAGINATION (ek hi page ho toh khud ko render nahi karta) */}
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={goToPage}
+                    />
                 </Container>
             </div>
         </div>

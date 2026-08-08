@@ -1,48 +1,26 @@
-import React, {useState, useEffect} from 'react'
-import { Container, PostCard } from '../components'
-import appwriteService from "../appwrite/config";
+import React from 'react'
+import { Container, PostCard, Pagination } from '../components'
 import NoResults from '../components/NoResults'; // 👈 IMPORT ADDED
+import { usePosts } from '../hooks/usePosts';
 
 function AllPosts() {
-    const [posts, setPosts] = useState([])
-    const [searchQuery, setSearchQuery] = useState('') // 👈 STATE ADDED
-    
-    useEffect(() => {
-        // Sirf active posts lana (Jo humne config me default set kiya hai)
-        //  getposts will give array so we take empty array
-        //  taking all posts from appwrite
-        appwriteService.getPosts([]).then((posts) => {
-            if (posts) {
-                //  server se aaya data we store in variable posts
-                // // Server se aaya hua 'posts' variable aisa dikhta hai:
-// {
-//     "total": 5,           // Kitne posts mile
-//     "documents": [        // <--- ASLI MAAL YAHAN HAI
-//         { "title": "Amazon", "content": "..." },
-//         { "title": "Google", "content": "..." }
-//     ]
-// } setpost  update the state
-                setPosts(posts.documents)
-            }
-        })
-    }, [])
-
-    // 👇 FILTERING LOGIC ADDED
-    const filteredPosts = posts.filter((post) => {
-        const query = searchQuery.toLowerCase();
-        return (
-            post.companyName?.toLowerCase().includes(query) ||
-            post.title?.toLowerCase().includes(query) || 
-            post.roleType?.toLowerCase().includes(query)
-        );
-    });
+    // Data, search aur pagination — sab hook me. Home bhi yahi use karta hai.
+    // Hook sirf status="active" posts laata hai, toh drafts ab yahan nahi aayenge.
+    const {
+        visiblePosts, filteredPosts,
+        searchQuery, setSearchQuery,
+        currentPage, totalPages, goToPage, listRef,
+    } = usePosts();
 
   return (
-    <div className='w-full py-8'>
+    <div ref={listRef} className='w-full py-8 scroll-mt-4'>
         <Container>
             {/* 👇 SEARCH BAR SECTION ADDED */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                <h1 className="text-2xl font-bold text-white">All Experiences</h1>
+                <h1 className="text-2xl font-bold text-white">
+                    All Experiences
+                    {searchQuery && <span className="text-gray-400 text-base font-normal ml-2">({filteredPosts.length} found)</span>}
+                </h1>
                 <div className="relative w-full md:w-1/3">
                     <input
                         type="text"
@@ -61,9 +39,9 @@ function AllPosts() {
             </div>
 
             <div className='flex flex-wrap'>
-                {/* 👇 UPDATED RENDERING LOGIC */}
-                {filteredPosts.length > 0 ? (
-                    filteredPosts.map((post) => (
+                {/* 👇 UPDATED RENDERING LOGIC — visiblePosts = current page ke 10 cards */}
+                {visiblePosts.length > 0 ? (
+                    visiblePosts.map((post) => (
                         <div key={post.$id} className='p-2 w-full md:w-1/4'>
                             <PostCard 
                                 $id={post.$id}
@@ -90,6 +68,13 @@ function AllPosts() {
                     )
                 )}
             </div>
+
+            {/* 👇 PAGINATION (ek hi page ho toh khud ko render nahi karta) */}
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={goToPage}
+            />
             </Container>
     </div>
   )

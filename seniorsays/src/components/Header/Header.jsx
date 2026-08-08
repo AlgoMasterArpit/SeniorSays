@@ -13,6 +13,7 @@ function Header() {
     { name: 'Login', slug: "/login", active: !authStatus },
     { name: 'Signup', slug: "/signup", active: !authStatus },
     { name: 'All Experiences', slug: "/all-posts", active: authStatus },
+    { name: 'My Experiences', slug: "/my-posts", active: authStatus },
     { name: 'Add Experience', slug: "/add-post", active: authStatus },
   ]
 
