@@ -179,16 +179,29 @@ async getPost(slug){
         }
     }
 
-    // 3. Get File Preview (OPTIONAL: If you ever upload images instead of PDFs)
-    getFilePreview(fileId) {
-        return this.bucket.getFilePreview(
-            conf.appwriteBucketId,
-            fileId
-        ) 
+    //  getFilePreview yahan se HATA diya. Wo IMAGES ka resized/cropped version
+    //  banata hai — PDF pe wo asli file deta hi nahi, ek generic "PDF icon" wali
+    //  tasveer bhej deta hai. Isi wajah se edit page pe resume ki jagah icon dikh
+    //  raha tha, aur error na aane ki wajah se kaafi der pata nahi chala.
+    //  Hume sirf PDF serve karne hain, image process nahi karni — toh iski
+    //  zaroorat hi nahi. Kabhi image thumbnails chahiye honge tab wapas laana.
+
+    // 3. View File — asli file, bina "download karo" wale header ke.
+    //    Browser khud dikha deta hai (PDF tab me khul jaata hai).
+    //    Use karo jab user ko file PADHNI hai.
+    getFileView(fileId) {
+        //  Object-style call jaan boojh ke: SDK me positional wala form
+        //  (bucketId, fileId) ab deprecated hai. Neeche wala purana form pe hai,
+        //  usko bhi kabhi convert kar dena.
+        return this.bucket.getFileView({
+            bucketId: conf.appwriteBucketId,
+            fileId,
+        });
     }
 
-    // 4. Download File (This is what you asked for!)
-    // This returns a URL that forces the browser to download the PDF
+    // 4. Download File
+    //    Content-Disposition: attachment header bhejta hai -> browser dikhata nahi,
+    //    seedha Downloads me save karta hai. Use karo jab user ko file RAKHNI hai.
     getFileDownload(fileId) {
         return this.bucket.getFileDownload(
             conf.appwriteBucketId,
