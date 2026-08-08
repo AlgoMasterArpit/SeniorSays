@@ -302,7 +302,11 @@ export default function PostForm({ post }) {
                     <div className="w-full mb-4">
                         <p className="text-white-400 text-sm mb-1">Attached Resume:</p>
                         <a
-                            href={appwriteService.getFilePreview(post.resumeFileId)}
+                            //  getFilePreview NAHI — wo images ke liye hai aur PDF pe
+                            //  resume ki jagah generic "PDF icon" bhej deta tha.
+                            //  Yahan target="_blank" hai matlab DIKHANA hai, save nahi
+                            //  karwana — toh View chahiye, Download nahi.
+                            href={appwriteService.getFileView(post.resumeFileId)}
                             target="_blank"
                             rel="noreferrer"
                             className="flex items-center gap-2 p-2 bg-slate-800 border border-slate-700 rounded text-teal-400 text-sm hover:bg-slate-700"
