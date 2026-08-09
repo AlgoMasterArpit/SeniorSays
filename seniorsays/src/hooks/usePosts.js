@@ -6,6 +6,22 @@ import { paginate } from '../utils/paginate';
 // Ek page pe itne cards dikhenge
 const POSTS_PER_PAGE = 10;
 
+//  Card sirf itne fields dikhata hai. Ye poori list hai — src/pages ke teeno list
+//  pages aur neeche wali search, sab milake sirf yahi padhte hain.
+//
+//  Sabse zaroori: `content` ISME NAHI HAI. Wo post ka poora HTML hai (~4 KB per post)
+//  aur list me kisi ko chahiye hi nahi — wo sirf Post.jsx pe dikhta hai, jo alag se
+//  getPost() call karta hai. Bina select ke hum 500 poore experiences download karke
+//  sirf unke title dikha rahe the (~2 MB ki jagah ab ~100 KB).
+//
+//  ⚠️ Naya field card pe dikhana ho toh YAHAN bhi add karna. Bhool gaye toh wo
+//  undefined aayega — error nahi milega, bas card me khaali jagah dikhegi.
+const CARD_FIELDS = [
+    "$id", "$createdAt",
+    "title", "companyName", "authorName",
+    "status", "interviewOutcome", "roleType", "difficulty",
+];
+
 // Posts ka data + search + pagination — ek jagah. Do mode hain:
 //
 //   usePosts()                    -> PUBLIC: sirf published (active) posts.
@@ -30,6 +46,7 @@ export function usePosts({ userId } = {}) {
             : [Query.equal("status", "active")];
 
         queries.push(Query.orderDesc("$createdAt"));   // naye posts pehle
+        queries.push(Query.select(CARD_FIELDS));       // poora content mat bhejo, sirf card wale fields
 
         // getPosts andar loop karke SAARE posts laata hai (koi 25/100 ka cap nahi)
         appwriteService.getPosts(queries).then((posts) => {
