@@ -86,7 +86,7 @@ function MyPosts() {
                     <div className="text-center py-16 bg-slate-800/40 border border-slate-700 rounded-xl">
                         <p className="text-gray-400">No Experience Shared Yet.</p>
                         <Link to="/add-post" className="text-teal-400 font-semibold hover:underline mt-2 inline-block">
-                            Share Your First Experience →
+                        Share Your Interview Experience Now
                         </Link>
                     </div>
                 )}

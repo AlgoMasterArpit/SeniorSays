@@ -92,6 +92,10 @@ export default function PostForm({ post }) {
                     // toh title ko "available" declare karna galat hai -> error state ko chhedo mat.
                     // Submit ke waqt 409 wala catch fallback bacha lega.
                     if (error?.code === 404) clearErrors("title");
+                    else setError("title", {
+                        type: "manual",
+                        message: "Error checking title availability. Please try again later."
+    });
                 }
             }
         }, 500); // 500ms delay
@@ -104,12 +108,7 @@ export default function PostForm({ post }) {
 
     const submit = async (data) => {
         // 👇 DIAGNOSTIC LOGS (Yahan check karein)
-        console.log("------- DEBUG START -------");
-        console.log("1. Redux UserData:", userData);
-        
-        // Direct Appwrite se poocho: "Kya koi login hai?"
-        // Note: Hum try catch block me check karenge niche taaki code clean rahe
-        console.log("------- DEBUG END -------");
+       
 
         // 👇 CHANGE 1: Yahan humne 'userData' ko ek naye variable 'currentUser' mein dala
         let currentUser = userData;
