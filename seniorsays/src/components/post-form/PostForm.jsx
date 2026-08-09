@@ -140,19 +140,40 @@ export default function PostForm({ post }) {
 
             if (post) {
                 // --- EDIT MODE ---
-                // Agar nayi file aayi hai, toh purani delete karo
-                // Agar file hai (matlab user ne Naya resume upload kiya).
-                if (file && post.resumeFileId) {
-                    appwriteService.deleteFile(post.resumeFileId);
-                }
+                //  ORDER JAAN BOOJH KE AISA HAI: upload -> DB update -> TAB purani delete.
+                //
+                //  Pehle ulta tha (delete pehle, update baad me). Us order me agar
+                //  updatePost fail ho jaata — network gira, validation error, kuch bhi —
+                //  to purani file pehle hi mit chuki hoti aur DB abhi bhi usi mit chuki
+                //  file ki ID pe point kar raha hota. User ka resume HAMESHA ke liye gaya,
+                //  post tooti hui, wapas laane ka koi rasta nahi.
+                //
+                //  Transactions hain nahi, toh operations ka order aisa rakhte hain ki
+                //  har beech wali failure se wapas aaya ja sake. Ab sabse bura natija
+                //  ek orphan file hai (storage me padi rahegi, kisi ki nahi) — jo baad me
+                //  saaf ki ja sakti hai. User ka data kabhi nahi marta.
                 //  post.$id is slug which tells ki konsa post update karna h
-
                 const dbPost = await appwriteService.updatePost(post.$id, {
                     ...data,
                     // Agar nayi file hai toh uski ID, nahi toh purani ID hi rakho
                     //  yha override ki humne id resume ki in database
                     resumeFileId: file ? file.$id : post.resumeFileId,
                 });
+
+                //  DB ab nayi file pe point kar raha hai, toh purani hatana safe hai.
+                //  await zaroori hai: pehle ye fire-and-forget tha, toh fail hone pe file
+                //  chupchaap orphan ho jaati thi aur kabhi pata hi nahi chalta.
+                //  Fail ho to bhi user ko rokte nahi — uska kaam ho chuka hai, ye sirf
+                //  safai hai. Isliye throw nahi, sirf log.
+                if (file && post.resumeFileId) {
+                    const deleted = await appwriteService.deleteFile(post.resumeFileId);
+                    if (!deleted) {
+                        console.warn(
+                            "Purani resume file delete nahi hui, orphan reh gayi:",
+                            post.resumeFileId
+                        );
+                    }
+                }
 
                 if (dbPost) {
                     navigate(`/post/${dbPost.$id}`);
