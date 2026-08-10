@@ -15,6 +15,7 @@ import EditPost from './pages/EditPost.jsx'
 import Post from './pages/Post.jsx'
 import AllPosts from './pages/AllPosts.jsx'
 import MyPosts from './pages/MyPosts.jsx'
+import NotFound from './pages/NotFound.jsx'
 
 // 🛣️ Router Configuration
 const router = createBrowserRouter([
@@ -87,6 +88,22 @@ const router = createBrowserRouter([
         {
             path: "/post/:slug",
             element: <Post />, // Reading page ko Public rakha hai (AuthLayout hataya hai), taaki bina login ke bhi seniors ka experience padh sakein.
+        },
+        {
+            //  CATCH-ALL: koi bhi aisa path jo upar match nahi hua.
+            //  Iske bina React Router apna default error screen dikhata tha —
+            //  khaali safed page, "Unexpected Application Error!", koi wapas jaane
+            //  ka rasta nahi.
+            //
+            //  Yahan children me rakha hai (App ke andar), taaki 404 page pe bhi
+            //  Header/Footer aayein.
+            //
+            //  Order maayne nahi rakhta — React Router v6+ specificity se rank
+            //  karta hai, upar-se-neeche nahi. "*" ki rank hamesha sabse kam hoti
+            //  hai, toh ye kisi concrete path se kabhi nahi jeetega. "sabse neeche
+            //  rakho" wali salaah v5 ke <Switch> ki purani aadat hai.
+            path: "*",
+            element: <NotFound />,
         },
     ],
   },

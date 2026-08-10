@@ -38,27 +38,49 @@ useEffect(() => {
             }
 
             // 2. Create Account
-            const userData = await authService.createAccount(data)
-            
-            if (userData) {
-                const session = await authService.login({ email: data.email, password: data.password })
-                if (session) {
-                    const currentUser = await authService.getCurrentuser()
-                    if (currentUser) dispatch(login(currentUser));
+            //  createAccount ANDAR HI login kar deta hai — auth.js me wo
+            //  `return this.login({ email, password })` karta hai. Toh ye SESSION
+            //  return karta hai, user object nahi (naam `userData` isi liye hataya,
+            //  wo galat naam hi wajah thi ki ye bug itne din chhupa raha).
+            //
+            //  Pehle yahan DOBARA authService.login() call hota tha. Aur Appwrite
+            //  active session ke upar naya session banane nahi deta. Matlab HAR
+            //  successful signup "session already active" error phenkta tha, catch
+            //  block user ko /login pe bhej deta tha — jabki wo already logged in tha.
+            //  Poora "one session at a time" bug isi ek extra call se paida hua tha.
+            const session = await authService.createAccount(data)
+
+            if (session) {
+                const currentUser = await authService.getCurrentuser()
+
+                //  navigate ab `if` ke ANDAR hai. Pehle bahar tha — getCurrentuser
+                //  fail hone pe dispatch nahi hota par navigate ho jaata tha, aur user
+                //  half-logged-in me phas jaata: Appwrite ke paas session, Redux ke
+                //  paas nahi. Header "Login" dikhata, /add-post block hota, aur usko
+                //  lagta signup fail ho gaya jabki account ban chuka tha.
+                if (currentUser) {
+                    dispatch(login(currentUser));
                     navigate("/")
+                } else {
+                    setError("Account ban gaya par login confirm nahi hua. Login page se try karo.")
                 }
             }
         } catch (error) {
-            // ✅ ERROR HANDLING LOGIC
-            // Agar error "Session" se related hai, iska matlab account ban gaya hai 
-            // par auto-login fail hua. Unhe Login page bhej do.
-            const errorMessage = error.message.toLowerCase();
-            
-            if (errorMessage.includes("session") || errorMessage.includes("active")) {
-                console.log("Account created but session active. Redirecting to login.");
-                navigate("/login"); 
+            //  Error ke MESSAGE STRING pe match nahi karte. Pehle
+            //  message.includes("session") || includes("active") tha — Appwrite kal
+            //  wording badal de to ye match chup-chaap band ho jaata aur user ko wahi
+            //  confusing raw error dikhne lag jaata. AppwriteException me `type` aur
+            //  `code` hote hain, wahi stable hain.
+            //
+            //  Yahan pahunchne ka matlab: ek purana session zinda tha jo upar wala
+            //  logout saaf nahi kar paya (aam taur pe tab, jab Redux "logged out"
+            //  kehta hai par Appwrite ke paas session hai — isliye AuthLayout ne
+            //  roka bhi nahi). Account ban chuka hoga, par naye user ka login nahi hua.
+            if (error?.type === "user_session_already_exists") {
+                try { await authService.logout(); } catch { /* stale session, koi baat nahi */ }
+                navigate("/login");
             } else {
-                // Agar koi aur error hai (jaise "Email already exists"), toh error dikhao
+                // Koi aur error (jaise "Email already exists") -> user ko dikhao
                 setError(error.message)
             }
         }

@@ -52,9 +52,16 @@ useEffect(() => {
                 //                 //  userdata aise hi nikalta h
                 const userData = await authService.getCurrentuser()
                 // / 3. Redux Store ko update karo ki "Bhai, user aa gaya hai"
-                if (userData) dispatch(authLogin(userData));
-                // Home page par bhej do 
-                navigate("/")
+                //  navigate `if` ke ANDAR hai (pehle bahar tha). getCurrentuser fail
+                //  ho to dispatch nahi hota — aur us waqt navigate karne se user
+                //  half-logged-in phas jaata: Appwrite me session hai, Redux me nahi.
+                //  Signup.jsx me bhi yahi galti thi, dono jagah theek ki hai.
+                if (userData) {
+                    dispatch(authLogin(userData));
+                    navigate("/")
+                } else {
+                    setError("Login ho gaya par user data nahi mila. Page refresh karke dekho.")
+                }
             }
         } catch (error) {
             //  Agar password galat hai ya user nahi mila, to error dikhao
