@@ -62,7 +62,17 @@ export class AuthService {
 
     async logout() {
         try {
-            return await this.account.deleteSessions()
+            //  deleteSession({ sessionId: 'current' }) — sirf IS device ka session.
+            //
+            //  Pehle deleteSessions() (plural) tha. Wo user ke SAARE devices ke session
+            //  udaa deta hai — laptop pe logout karo to phone pe bhi logout ho jaate.
+            //  "Sab jagah se logout karo" ek feature hota hai jo apps jaan boojh ke dete
+            //  hain; yahan wo galti se default ban gaya tha.
+            //
+            //  Aur ye zyada chubhta tha kyunki Login/Signup mount pe bhi logout() chalta
+            //  hai — matlab koi bandaa sirf /login page kholta, aur uske baaki devices ke
+            //  session bhi udd jaate the.
+            return await this.account.deleteSession({ sessionId: 'current' })
         }
         catch (error) {
             throw error
